@@ -19,21 +19,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class AutoController {
 
     private AuthService authService;
+    private UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<AuthResponse> signup(SignupRequest request){
+    public ResponseEntity<AuthResponse> signup(SignupRequest request) {
         return ResponseEntity.ok(authService.signup(request));
     }
 
     @PostMapping("/login")
-        public ResponseEntity<AuthResponse> login(LoginRequest request){
-            return ResponseEntity.ok(authService.login(request));
-        }
+    public ResponseEntity<AuthResponse> login(LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request));
+    }
 
     @GetMapping("/me")
-    public ResponseEntity<UserProfileResponse> getProfile(){
-        Long userId= 1L;
-        return ResponseEntity.ok((UserProfileResponse) UserService.getProfile(userId));
+    public ResponseEntity<UserProfileResponse> getProfile() {
+        Long userId = 1L;
+        return ResponseEntity.ok(userService.getProfile(userId));
     }
 
 }

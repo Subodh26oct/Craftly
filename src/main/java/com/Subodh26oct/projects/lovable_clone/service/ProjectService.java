@@ -10,11 +10,11 @@ public interface ProjectService {
 
     List<ProjectSummaryResponse> getUserProjects(Long userId);
 
-    ProjectResponse getUserProjectsById(Long id, Long userId);
+    ProjectResponse getUserProjectById(Long id, Long userId);
 
-    ProjectService createProject(ProjectRequest request, Long userId);
+    ProjectResponse createProject(ProjectRequest request, Long userId);
 
-    ProjectService updateProject(Long id, ProjectRequest request, Long userId);
+    ProjectResponse updateProject(Long id, ProjectRequest request, Long userId);
 
     void softDelete(Long id, Long userId);
 }
