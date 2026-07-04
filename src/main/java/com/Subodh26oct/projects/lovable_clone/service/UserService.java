@@ -1,6 +1,7 @@
 package com.Subodh26oct.projects.lovable_clone.service;
 
+import com.Subodh26oct.projects.lovable_clone.dto.auth.UserProfileResponse;
+
 public interface UserService {
-    static Object getProfile(Long userId) {
-    }
+    UserProfileResponse getProfile(Long userId);
 }
