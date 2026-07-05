@@ -1,12 +1,12 @@
 package com.Subodh26oct.projects.lovable_clone.entity;
 
 
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.Setter;
+import com.Subodh26oct.projects.lovable_clone.dto.project.ProjectRequest;
+import jakarta.persistence.*;
+import lombok.*;
 import lombok.experimental.FieldDefaults;
-import org.apache.catalina.mbeans.SparseUserDatabaseMBean;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 
@@ -14,16 +14,32 @@ import java.time.Instant;
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
+@Entity
+@NoArgsConstructor
+@Builder
+@Table(name="projects")
+
 public class Project {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @Column(nullable = false)
     String name;
 
+    @ManyToOne
+            @JoinColumn(name="owner_id", nullable = false)
     User owner;
 
     Boolean isPublic = false;
 
+    @CreationTimestamp
     Instant createdAt;
+    @UpdateTimestamp
     Instant updatedAt;
     Instant deletedAt;
+
+    public Project(User owner, ProjectRequest request) {
+    }
 }
