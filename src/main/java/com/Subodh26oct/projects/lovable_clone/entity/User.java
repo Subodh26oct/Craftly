@@ -7,33 +7,32 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+
 @Getter
-@Setter 
+@Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @AllArgsConstructor
 @Entity
 @NoArgsConstructor
 @Builder
-@Table(name="users")
+@Table(name = "users")
 public class User {
 
-     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-     Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    Long id;
 
+    String firstName;
+    String lastName;
+    String email;
+    String password;
+    String avatarUrl;
 
-     String firstName;
-     String lastName;
-     String email;
-     String password;
-     String avatarUrl;
+    @CreationTimestamp
+    Instant createdAt;
 
-     @CreationTimestamp
-     Instant createdAt;
+    @UpdateTimestamp
+    Instant updatedAt;
 
-     @UpdateTimestamp
-     Instant updatedAt;
-
-     Instant deletedAt;
-
-
+    Instant deletedAt;
 }

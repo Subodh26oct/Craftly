@@ -19,5 +19,5 @@ spring:
       hibernate:
         format_sql: true
 
-
-
+jwt:
+  secret-key: "your-256-bit-secret-key-for-dev-only-change-in-prod"

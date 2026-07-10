@@ -1,7 +1,6 @@
 package com.Subodh26oct.projects.lovable_clone.entity;
 
 
-import com.Subodh26oct.projects.lovable_clone.dto.project.ProjectRequest;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -39,7 +38,4 @@ public class Project {
     @UpdateTimestamp
     Instant updatedAt;
     Instant deletedAt;
-
-    public Project(User owner, ProjectRequest request) {
-    }
 }

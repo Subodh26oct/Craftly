@@ -1,6 +1,8 @@
 package com.Subodh26oct.projects.lovable_clone.dto.project;
 
+import jakarta.validation.constraints.NotBlank;
+
 public record ProjectRequest(
-        String name
+       @NotBlank String name
 ) {
 }
