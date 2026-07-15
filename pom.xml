@@ -14,7 +14,7 @@
 	<name>lovable-clone</name>
 	<description>Lovable clone backend</description>
 	<properties>
-		<java.version>21</java.version>
+		<java.version>26</java.version>
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
 	</properties>
 	<dependencies>
@@ -129,6 +129,7 @@
 							<version>0.2.0</version>
 						</path>
 					</annotationProcessorPaths>
+					<release>26</release>
 				</configuration>
 			</plugin>
 		</plugins>

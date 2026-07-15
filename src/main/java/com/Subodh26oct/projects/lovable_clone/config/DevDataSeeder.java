@@ -9,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -19,6 +20,7 @@ public class DevDataSeeder implements ApplicationRunner {
 
     UserRepository userRepository;
     EntityManager entityManager;
+    PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -27,10 +29,13 @@ public class DevDataSeeder implements ApplicationRunner {
             return;
         }
 
+        String encodedPassword = passwordEncoder.encode("password");
+
         entityManager.createNativeQuery("""
                 INSERT INTO users (id, first_name, last_name, email, password, created_at, updated_at)
-                VALUES (1, 'Dev', 'User', 'dev@craftly.local', 'password', NOW(), NOW())
+                VALUES (1, 'Dev', 'User', 'dev@craftly.local', :password, NOW(), NOW())
                 """)
+                .setParameter("password", encodedPassword)
                 .executeUpdate();
 
         entityManager.createNativeQuery(

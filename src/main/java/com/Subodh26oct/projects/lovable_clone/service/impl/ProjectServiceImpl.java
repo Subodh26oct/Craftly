@@ -46,6 +46,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         Project project = Project.builder()
                 .name(request.name())
+                .owner(owner)
                 .isPublic(false)
                 .build();
         project = projectRepository.save(project);
@@ -106,3 +107,4 @@ public class ProjectServiceImpl implements ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Project", projectId.toString()));
     }
 }
+

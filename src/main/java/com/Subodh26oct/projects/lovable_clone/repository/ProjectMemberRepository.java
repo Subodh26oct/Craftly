@@ -7,14 +7,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Repository
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, ProjectMemberId> {
 
-    @Query("""
-            SELECT pm FROM ProjectMember pm
-            WHERE pm.id.projectId = :projectId
-            """)
-    List<ProjectMember> findAllByProjectId(@Param("projectId") Long projectId);
+    List<ProjectMember> findByIdProjectId(Long projectId);
 }
+

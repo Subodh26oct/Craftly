@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+
 @RestController
-@RequiredArgsConstructor
 @RequestMapping("/api/projects/{projectId}/members")
+@RequiredArgsConstructor
 public class ProjectMemberController {
 
     private final ProjectMemberService projectMemberService;
@@ -29,7 +30,6 @@ public class ProjectMemberController {
             @PathVariable Long projectId,
             @RequestBody @Valid InviteMemberRequest request
     ) {
-
         return ResponseEntity.status(HttpStatus.CREATED).body(
                 projectMemberService.inviteMember(projectId, request)
         );
@@ -52,6 +52,5 @@ public class ProjectMemberController {
         projectMemberService.removeProjectMember(projectId, memberId);
         return ResponseEntity.noContent().build();
     }
-
 
 }

@@ -10,8 +10,8 @@ import java.time.Instant;
 @Getter
 @Setter
 @FieldDefaults(level = AccessLevel.PRIVATE)
-@AllArgsConstructor
 @Entity
+@AllArgsConstructor
 @NoArgsConstructor
 @Builder
 @Table(name = "project_members")
@@ -22,12 +22,10 @@ public class ProjectMember {
 
     @ManyToOne
     @MapsId("projectId")
-    @JoinColumn(name = "project_id")
     Project project;
 
     @ManyToOne
     @MapsId("userId")
-    @JoinColumn(name = "user_id")
     User user;
 
     @Enumerated(EnumType.STRING)
@@ -36,4 +34,6 @@ public class ProjectMember {
 
     Instant invitedAt;
     Instant acceptedAt;
+
 }
+

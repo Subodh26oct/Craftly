@@ -8,7 +8,7 @@ import org.mapstruct.Mapping;
 
 import java.util.List;
 
-@Mapper(componentModel = "spring", uses = UserMapper.class)
+@Mapper(componentModel = "spring")
 public interface ProjectMapper {
 
     ProjectResponse toProjectResponse(Project project);
@@ -17,4 +17,5 @@ public interface ProjectMapper {
     ProjectSummaryResponse toProjectSummaryResponse(Project project);
 
     List<ProjectSummaryResponse> toListOfProjectSummaryResponse(List<Project> projects);
+
 }

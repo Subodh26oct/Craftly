@@ -22,7 +22,6 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-
 @Service
 @FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 @RequiredArgsConstructor
@@ -41,7 +40,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         Long userId = authUtil.getCurrentUserId();
         Project project = getAccessibleProjectById(projectId, userId);
 
-        return projectMemberRepository.findAllByProjectId(projectId)
+        return projectMemberRepository.findByIdProjectId(projectId)
                 .stream()
                 .map(projectMemberMapper::toProjectMemberResponseFromMember)
                 .toList();
@@ -52,7 +51,7 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         Long userId = authUtil.getCurrentUserId();
         Project project = getAccessibleProjectById(projectId, userId);
 
-        User invitee = userRepository.findByEmail(request.email()).orElseThrow();
+        User invitee = userRepository.findByUsername(request.username()).orElseThrow();
 
         if(invitee.getId().equals(userId)) {
             throw new RuntimeException("Cannot invite yourself");
@@ -105,11 +104,10 @@ public class ProjectMemberServiceImpl implements ProjectMemberService {
         projectMemberRepository.deleteById(projectMemberId);
     }
 
-
     ///  INTERNAL FUNCTIONS
 
     public Project getAccessibleProjectById(Long projectId, Long userId) {
         return projectRepository.findAccessibleProjectById(projectId, userId).orElseThrow();
     }
-
 }
+

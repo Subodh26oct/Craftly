@@ -7,6 +7,7 @@ import com.Subodh26oct.projects.lovable_clone.dto.subscription.SubscriptionRespo
 import com.Subodh26oct.projects.lovable_clone.service.SubscriptionService;
 import org.springframework.stereotype.Service;
 
+
 @Service
 public class SubscriptionServiceImpl implements SubscriptionService {
     @Override
@@ -24,3 +25,4 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         return null;
     }
 }
+

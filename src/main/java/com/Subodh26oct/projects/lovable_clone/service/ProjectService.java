@@ -7,12 +7,11 @@ import com.Subodh26oct.projects.lovable_clone.dto.project.ProjectSummaryResponse
 import java.util.List;
 
 public interface ProjectService {
-
-    ProjectResponse createProject(ProjectRequest request);
-
     List<ProjectSummaryResponse> getUserProjects();
 
     ProjectResponse getUserProjectById(Long id);
+
+    ProjectResponse createProject(ProjectRequest request);
 
     ProjectResponse updateProject(Long id, ProjectRequest request);
 

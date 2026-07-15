@@ -5,59 +5,55 @@ import com.Subodh26oct.projects.lovable_clone.dto.auth.LoginRequest;
 import com.Subodh26oct.projects.lovable_clone.dto.auth.SignupRequest;
 import com.Subodh26oct.projects.lovable_clone.dto.auth.UserProfileResponse;
 import com.Subodh26oct.projects.lovable_clone.entity.User;
+import com.Subodh26oct.projects.lovable_clone.error.BadRequestException;
+import com.Subodh26oct.projects.lovable_clone.mapper.UserMapper;
 import com.Subodh26oct.projects.lovable_clone.repository.UserRepository;
 import com.Subodh26oct.projects.lovable_clone.security.AuthUtil;
 import com.Subodh26oct.projects.lovable_clone.service.AuthService;
+import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-
 @Service
 @RequiredArgsConstructor
+@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class AuthServiceImpl implements AuthService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final AuthUtil authUtil;
+    UserRepository userRepository;
+    UserMapper userMapper;
+    PasswordEncoder passwordEncoder;
+    AuthUtil authUtil;
+    AuthenticationManager authenticationManager;
 
     @Override
     public AuthResponse signup(SignupRequest request) {
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
-        }
+        userRepository.findByUsername(request.username()).ifPresent(user -> {
+            throw new BadRequestException("User already exists with username: "+request.username());
+        });
 
-        User user = User.builder()
-                .email(request.email())
-                .firstName(request.name())
-                .password(passwordEncoder.encode(request.password()))
-                .build();
+        User user = userMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(request.password()));
+        user = userRepository.save(user);
 
-        User saved = userRepository.save(user);
-        String token = authUtil.generateAccessToken(saved);
-
-        return new AuthResponse(token, toProfile(saved));
+        String token = authUtil.generateAccessToken(user);
+        return new AuthResponse(token, userMapper.toUserProfileResponse(user));
     }
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password"));
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(request.username(), request.password())
+        );
 
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
-        }
+        User user = (User) authentication.getPrincipal();
 
         String token = authUtil.generateAccessToken(user);
-        return new AuthResponse(token, toProfile(user));
-    }
-
-    private UserProfileResponse toProfile(User user) {
-        String name = user.getFirstName() != null ? user.getFirstName() : "";
-        if (user.getLastName() != null && !user.getLastName().isBlank()) {
-            name = name + " " + user.getLastName();
-        }
-        return new UserProfileResponse(user.getId(), user.getEmail(), name.trim(), user.getAvatarUrl());
+        return new AuthResponse(token, userMapper.toUserProfileResponse(user));
     }
 }
