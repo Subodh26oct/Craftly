@@ -37,6 +37,7 @@ public class Project {
             @JoinColumn(name="owner_id", nullable = false)
     User owner;
 
+    @Builder.Default
     Boolean isPublic = false;
 
     @CreationTimestamp
