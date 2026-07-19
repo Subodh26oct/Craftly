@@ -32,8 +32,8 @@ public class DevDataSeeder implements ApplicationRunner {
         String encodedPassword = passwordEncoder.encode("password");
 
         entityManager.createNativeQuery("""
-                INSERT INTO users (id, first_name, last_name, email, password, created_at, updated_at)
-                VALUES (1, 'Dev', 'User', 'dev@craftly.local', :password, NOW(), NOW())
+                INSERT INTO users (id, name, email, password, created_at, updated_at, email_verified)
+                VALUES (1, 'Dev User', 'dev@craftly.local', :password, NOW(), NOW(), true)
                 """)
                 .setParameter("password", encodedPassword)
                 .executeUpdate();

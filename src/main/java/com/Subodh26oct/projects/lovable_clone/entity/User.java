@@ -25,9 +25,26 @@ public class User implements UserDetails {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
 
+    @Column(name = "email", unique = true, nullable = false)
     String username;
+
     String password;
     String name;
+
+    @Column(name = "avatar_url")
+    String avatarUrl;
+
+    String provider;
+
+    @Column(name = "provider_id")
+    String providerId;
+
+    @Builder.Default
+    @Column(name = "email_verified")
+    Boolean emailVerified = false;
+
+    @Column(name = "stripe_customer_id")
+    String stripeCustomerId;
 
     @CreationTimestamp
     Instant createdAt;
@@ -43,7 +60,7 @@ public class User implements UserDetails {
     }
 
     public String getEmail() {
-        return null;
+        return username;
     }
 }
 
