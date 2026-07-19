@@ -1,21 +1,53 @@
 package com.Subodh26oct.projects.lovable_clone.mapper;
 
+import com.Subodh26oct.projects.lovable_clone.dto.auth.UserProfileResponse;
 import com.Subodh26oct.projects.lovable_clone.dto.project.ProjectResponse;
 import com.Subodh26oct.projects.lovable_clone.dto.project.ProjectSummaryResponse;
 import com.Subodh26oct.projects.lovable_clone.entity.Project;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
-@Mapper(componentModel = "spring")
-public interface ProjectMapper {
+@Component
+@RequiredArgsConstructor
+public class ProjectMapper {
 
-    ProjectResponse toProjectResponse(Project project);
+    private final UserMapper userMapper;
 
-    @Mapping(target = "projectName", source = "name")
-    ProjectSummaryResponse toProjectSummaryResponse(Project project);
+    public ProjectResponse toProjectResponse(Project project) {
+        if (project == null) {
+            return null;
+        }
+        UserProfileResponse ownerResponse = userMapper.toUserProfileResponse(project.getOwner());
+        return new ProjectResponse(
+                project.getId(),
+                project.getName(),
+                project.getCreatedAt(),
+                project.getUpdatedAt(),
+                ownerResponse
+        );
+    }
 
-    List<ProjectSummaryResponse> toListOfProjectSummaryResponse(List<Project> projects);
+    public ProjectSummaryResponse toProjectSummaryResponse(Project project) {
+        if (project == null) {
+            return null;
+        }
+        return new ProjectSummaryResponse(
+                project.getId(),
+                project.getName(),
+                project.getCreatedAt(),
+                project.getUpdatedAt()
+        );
+    }
 
+    public List<ProjectSummaryResponse> toListOfProjectSummaryResponse(List<Project> projects) {
+        if (projects == null) {
+            return null;
+        }
+        return projects.stream()
+                .map(this::toProjectSummaryResponse)
+                .collect(Collectors.toList());
+    }
 }

@@ -14,5 +14,8 @@ import java.util.List;
 public interface ProjectMemberRepository extends JpaRepository<ProjectMember, ProjectMemberId> {
 
     List<ProjectMember> findByIdProjectId(Long projectId);
+
+    boolean existsByIdProjectIdAndIdUserId(Long projectId, Long userId);
+
 }
 

@@ -98,6 +98,13 @@
 			<version>4.1.0</version>
 		</dependency>
 
+		<!-- MinIO Java SDK for object storage -->
+		<dependency>
+			<groupId>io.minio</groupId>
+			<artifactId>minio</artifactId>
+			<version>8.5.12</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -106,6 +113,7 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 				<configuration>
+					<mainClass>com.Subodh26oct.projects.lovable_clone.LovableCloneApplication</mainClass>
 					<excludes>
 						<exclude>
 							<groupId>org.projectlombok</groupId>
