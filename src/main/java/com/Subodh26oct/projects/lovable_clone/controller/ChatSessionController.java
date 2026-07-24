@@ -62,4 +62,17 @@ public class ChatSessionController {
         Long userId = authUtil.getCurrentUserId();
         return ResponseEntity.ok(chatSessionService.sendMessage(projectId, sessionId, request, userId));
     }
+
+    /** 
+     * POST /api/projects/{projectId}/chat/sessions/{sessionId}/stream → stream AI code generation via Server-Sent Events (SSE)
+     */
+    @PostMapping(value = "/{sessionId}/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamMessage(
+            @PathVariable Long projectId,
+            @PathVariable Long sessionId,
+            @Valid @RequestBody ChatMessageRequest request
+    ) {
+        Long userId = authUtil.getCurrentUserId();
+        return chatSessionService.streamMessage(projectId, sessionId, request, userId);
+    }
 }

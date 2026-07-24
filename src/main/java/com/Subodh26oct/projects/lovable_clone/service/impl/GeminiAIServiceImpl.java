@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @Slf4j
 @Service
@@ -57,6 +58,22 @@ public class GeminiAIServiceImpl implements AIService {
             return generateMockResponse(prompt);
         }
     }
+
+    @Override
+    public AIResponse streamCode(ChatSession session, String prompt, List<ChatMessageResponse> history, Consumer<String> tokenConsumer) {
+        if (apiKey == null || apiKey.trim().isEmpty() || apiKey.equals("placeholder")) {
+            log.info("No Gemini API key configured. Using offline mock streaming generation service.");
+            return generateMockStreamingResponse(prompt, tokenConsumer);
+        }
+
+        try {
+            return callGeminiStreamingAPI(session.getProject().getId(), prompt, history, tokenConsumer);
+        } catch (Exception e) {
+            log.error("Failed to stream code from Gemini. Falling back to mock streaming generator.", e);
+            return generateMockStreamingResponse(prompt, tokenConsumer);
+        }
+    }
+
 
     private AIResponse callGeminiAPI(Long projectId, String prompt, List<ChatMessageResponse> history) throws IOException {
         String systemInstruction = """
@@ -308,6 +325,158 @@ public class GeminiAIServiceImpl implements AIService {
 
         return new AIResponse(explanation, ops);
     }
+
+    private AIResponse generateMockStreamingResponse(String prompt, Consumer<String> tokenConsumer) {
+        AIResponse response = generateMockResponse(prompt);
+        if (tokenConsumer != null && response.explanation() != null) {
+            String[] words = response.explanation().split(" ");
+            for (String word : words) {
+                tokenConsumer.accept(word + " ");
+                try {
+                    Thread.sleep(40);
+                } catch (InterruptedException ignored) {}
+            }
+        }
+        return response;
+    }
+
+    private AIResponse callGeminiStreamingAPI(Long projectId, String prompt, List<ChatMessageResponse> history, Consumer<String> tokenConsumer) throws IOException {
+        String systemInstruction = """
+                You are a senior frontend software engineer building modern React/CSS/HTML code for the user.
+                Always respond in the exact JSON format specified by the response schema.
+                Do not include markdown or backticks in the raw JSON HTTP response itself.
+                
+                The JSON response MUST match this structure:
+                {
+                  "explanation": "A concise user-facing description of what you did.",
+                  "fileOperations": [
+                    {
+                      "type": "CREATE_OR_UPDATE",
+                      "path": "src/components/Button.jsx",
+                      "content": "raw file content text"
+                    }
+                  ]
+                }
+                """;
+
+        StringBuilder workspaceContext = new StringBuilder("Current Project Files:\n");
+        List<ProjectFile> dbFiles = projectFileRepository.findByProjectId(projectId);
+        for (ProjectFile file : dbFiles) {
+            workspaceContext.append("--- File: ").append(file.getPath()).append(" ---\n");
+            try {
+                String content = storageService.get(file.getMinioObjectKey());
+                workspaceContext.append(content).append("\n");
+            } catch (Exception e) {
+                workspaceContext.append("[Error loading file content]\n");
+            }
+        }
+
+        StringBuilder fullPrompt = new StringBuilder();
+        fullPrompt.append("SYSTEM INSTRUCTION:\n").append(systemInstruction).append("\n\n");
+        fullPrompt.append("WORKSPACE FILES:\n").append(workspaceContext).append("\n\n");
+        fullPrompt.append("CHAT HISTORY:\n");
+        for (ChatMessageResponse message : history) {
+            fullPrompt.append("- ").append(message.role()).append(": ").append(message.content()).append("\n");
+        }
+        fullPrompt.append("\nLATEST USER PROMPT: ").append(prompt);
+
+        Map<String, Object> requestMap = new HashMap<>();
+        List<Map<String, Object>> contentsList = new ArrayList<>();
+        Map<String, Object> contentMap = new HashMap<>();
+        List<Map<String, Object>> partsList = new ArrayList<>();
+        Map<String, Object> partMap = new HashMap<>();
+        partMap.put("text", fullPrompt.toString());
+        partsList.add(partMap);
+        contentMap.put("parts", partsList);
+        contentsList.add(contentMap);
+        requestMap.put("contents", contentsList);
+
+        Map<String, Object> generationConfig = new HashMap<>();
+        generationConfig.put("responseMimeType", "application/json");
+
+        Map<String, Object> responseSchema = new HashMap<>();
+        responseSchema.put("type", "OBJECT");
+        Map<String, Object> properties = new HashMap<>();
+        
+        Map<String, Object> expSchema = new HashMap<>();
+        expSchema.put("type", "STRING");
+        properties.put("explanation", expSchema);
+
+        Map<String, Object> fileOpsSchema = new HashMap<>();
+        fileOpsSchema.put("type", "ARRAY");
+        Map<String, Object> itemSchema = new HashMap<>();
+        itemSchema.put("type", "OBJECT");
+        Map<String, Object> itemProps = new HashMap<>();
+        
+        Map<String, Object> typeSchema = new HashMap<>();
+        typeSchema.put("type", "STRING");
+        typeSchema.put("enum", List.of("CREATE_OR_UPDATE", "DELETE"));
+        itemProps.put("type", typeSchema);
+        
+        Map<String, Object> pathSchema = new HashMap<>();
+        pathSchema.put("type", "STRING");
+        itemProps.put("path", pathSchema);
+        
+        Map<String, Object> contentSchema = new HashMap<>();
+        contentSchema.put("type", "STRING");
+        itemProps.put("content", contentSchema);
+
+        itemSchema.put("properties", itemProps);
+        itemSchema.put("required", List.of("type", "path", "content"));
+        fileOpsSchema.put("items", itemSchema);
+        properties.put("fileOperations", fileOpsSchema);
+
+        responseSchema.put("properties", properties);
+        responseSchema.put("required", List.of("explanation", "fileOperations"));
+        generationConfig.put("responseSchema", responseSchema);
+        requestMap.put("generationConfig", generationConfig);
+
+        String jsonBody = objectMapper.writeValueAsString(requestMap);
+        RequestBody body = RequestBody.create(jsonBody, MediaType.get("application/json; charset=utf-8"));
+
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=" + apiKey;
+
+        Request request = new Request.Builder()
+                .url(url)
+                .post(body)
+                .build();
+
+        StringBuilder fullTextBuilder = new StringBuilder();
+
+        try (Response response = httpClient.newCall(request).execute()) {
+            if (!response.isSuccessful()) {
+                throw new IOException("Gemini Streaming API call failed with code " + response.code() + " and message " + response.message());
+            }
+
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(response.body().byteStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith("data: ")) {
+                        String jsonChunk = line.substring(6).trim();
+                        if (jsonChunk.equals("[DONE]")) break;
+                        try {
+                            JsonNode node = objectMapper.readTree(jsonChunk);
+                            String textPart = node.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
+                            if (!textPart.isEmpty()) {
+                                fullTextBuilder.append(textPart);
+                                if (tokenConsumer != null) {
+                                    tokenConsumer.accept(textPart);
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
+                }
+            }
+        }
+
+        String fullText = fullTextBuilder.toString();
+        if (fullText.isEmpty()) {
+            throw new IOException("Gemini returned empty streaming response.");
+        }
+
+        return objectMapper.readValue(fullText, AIResponse.class);
+    }
+
 
     private String extractFilenameFromPrompt(String prompt, String defaultName) {
         if (prompt == null) return defaultName;
