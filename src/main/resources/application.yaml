@@ -21,6 +21,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
 
+
 jwt:
   secret-key: ${JWT_SECRET_KEY}
 
@@ -37,4 +38,3 @@ qdrant:
   url: ${QDRANT_URL}
   api-key: ${QDRANT_API_KEY:}
   collection: ${QDRANT_COLLECTION}
-
