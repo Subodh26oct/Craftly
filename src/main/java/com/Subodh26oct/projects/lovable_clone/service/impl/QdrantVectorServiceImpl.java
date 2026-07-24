@@ -23,13 +23,13 @@ import java.util.concurrent.TimeUnit;
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class QdrantVectorServiceImpl implements CodeVectorService {
 
-    @Value("${qdrant.url:http://localhost:6333}")
+    @Value("${qdrant.url}")
     String qdrantUrl;
 
     @Value("${qdrant.api-key:}")
     String qdrantApiKey;
 
-    @Value("${qdrant.collection:craftly_code_chunks}")
+    @Value("${qdrant.collection}")
     String collectionName;
 
     final ObjectMapper objectMapper;
