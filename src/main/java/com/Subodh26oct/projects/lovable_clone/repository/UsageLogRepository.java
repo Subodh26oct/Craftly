@@ -13,7 +13,17 @@ import java.util.List;
 @Repository
 public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
     List<UsageLog> findByUser(User user);
-    
+    List<UsageLog> findByUserIdOrderByCreatedAtDesc(Long userId);
+    List<UsageLog> findByProjectIdOrderByCreatedAtDesc(Long projectId);
+
     @Query("SELECT COALESCE(SUM(u.tokensUsed), 0) FROM UsageLog u WHERE u.user.id = :userId AND u.createdAt >= :since")
     Integer sumTokensUsedByUserIdAndCreatedAtAfter(@Param("userId") Long userId, @Param("since") Instant since);
+
+    @Query("SELECT COALESCE(SUM(u.tokensUsed), 0) FROM UsageLog u WHERE u.project.id = :projectId AND u.createdAt >= :since")
+    Integer sumTokensUsedByProjectIdAndCreatedAtAfter(@Param("projectId") Long projectId, @Param("since") Instant since);
+
+    @Query("SELECT COALESCE(SUM(u.tokensUsed), 0) FROM UsageLog u WHERE u.project.id = :projectId")
+    Integer sumTokensUsedByProjectId(@Param("projectId") Long projectId);
+
+    Long countByProjectId(Long projectId);
 }

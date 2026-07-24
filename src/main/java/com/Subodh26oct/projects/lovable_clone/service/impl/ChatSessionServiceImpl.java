@@ -40,6 +40,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     ChatMapper chatMapper;
     ObjectMapper objectMapper;
     com.Subodh26oct.projects.lovable_clone.service.CodeVectorService codeVectorService;
+    com.Subodh26oct.projects.lovable_clone.service.UsageTrackingService usageTrackingService;
 
     @Override
     public ChatSessionResponse createSession(Long projectId, ChatSessionRequest request, Long userId) {
@@ -74,6 +75,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public ChatMessageResponse sendMessage(Long projectId, Long sessionId, ChatMessageRequest request, Long userId) {
+        usageTrackingService.checkRateLimit(userId, 500);
+
         Project project = getAccessibleProject(projectId, userId);
         ChatSession session = getSessionInProject(projectId, sessionId);
         User actor = userRepository.getReferenceById(userId);
@@ -139,6 +142,8 @@ public class ChatSessionServiceImpl implements ChatSessionService {
 
     @Override
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamMessage(Long projectId, Long sessionId, ChatMessageRequest request, Long userId) {
+        usageTrackingService.checkRateLimit(userId, 500);
+
         org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(180_000L);
 
         java.util.concurrent.CompletableFuture.runAsync(() -> {
