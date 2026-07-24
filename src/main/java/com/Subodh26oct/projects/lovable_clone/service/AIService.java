@@ -5,6 +5,7 @@ import com.Subodh26oct.projects.lovable_clone.dto.chat.ChatMessageResponse;
 import com.Subodh26oct.projects.lovable_clone.entity.ChatSession;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 public interface AIService {
 
@@ -18,4 +19,15 @@ public interface AIService {
      * @return the structured AIResponse containing file changes and text summary
      */
     AIResponse generateCode(ChatSession session, String prompt, List<ChatMessageResponse> history);
+
+    /**
+     * Stream AI generation tokens in real-time to a consumer callback while building the response.
+     *
+     * @param session the current chat session
+     * @param prompt the user's latest prompt message
+     * @param history rolling history of the session
+     * @param tokenConsumer callback called whenever a text token chunk arrives
+     * @return the final structured AIResponse
+     */
+    AIResponse streamCode(ChatSession session, String prompt, List<ChatMessageResponse> history, Consumer<String> tokenConsumer);
 }

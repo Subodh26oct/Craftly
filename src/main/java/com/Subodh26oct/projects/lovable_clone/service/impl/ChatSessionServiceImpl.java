@@ -136,6 +136,101 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         return chatMapper.toChatMessageResponse(assistantMessage);
     }
 
+    @Override
+    public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamMessage(Long projectId, Long sessionId, ChatMessageRequest request, Long userId) {
+        org.springframework.web.servlet.mvc.method.annotation.SseEmitter emitter = new org.springframework.web.servlet.mvc.method.annotation.SseEmitter(180_000L);
+
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            try {
+                Project project = getAccessibleProject(projectId, userId);
+                ChatSession session = getSessionInProject(projectId, sessionId);
+                User actor = userRepository.getReferenceById(userId);
+
+                // 1. Save USER message
+                ChatMessage userMessage = ChatMessage.builder()
+                        .chatSession(session)
+                        .content(request.content())
+                        .role(MessageRole.USER)
+                        .build();
+                chatMessageRepository.save(userMessage);
+
+                // 2. Get rolling history (last 10)
+                List<ChatMessage> dbHistory = chatMessageRepository.findByChatSessionOrderByCreatedAtAsc(session);
+                List<ChatMessage> lastTen = dbHistory.size() > 10 
+                        ? dbHistory.subList(dbHistory.size() - 10, dbHistory.size()) 
+                        : dbHistory;
+                List<ChatMessageResponse> historyResponses = chatMapper.toListOfChatMessageResponse(lastTen);
+
+                // 3. Call AI Service streamCode, emitting "token" events
+                AIResponse aiResponse = aiService.streamCode(session, request.content(), historyResponses, tokenChunk -> {
+                    try {
+                        emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                                .name("token")
+                                .data(new StreamEvent("token", tokenChunk)));
+                    } catch (Exception e) {
+                        log.warn("Error sending SSE token: {}", e.getMessage());
+                    }
+                });
+
+                // 4. Apply file changes
+                applyFileOperations(project, actor, aiResponse.fileOperations());
+
+                // 5. Send file operations event
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                        .name("file_operation")
+                        .data(new StreamEvent("file_operation", aiResponse.fileOperations())));
+
+                // 6. Save ASSISTANT message
+                String toolCallsJson;
+                try {
+                    toolCallsJson = objectMapper.writeValueAsString(aiResponse.fileOperations());
+                } catch (Exception e) {
+                    toolCallsJson = "[]";
+                }
+
+                int mockTokens = 150 + (request.content().length() * 3);
+                ChatMessage assistantMessage = ChatMessage.builder()
+                        .chatSession(session)
+                        .content(aiResponse.explanation())
+                        .role(MessageRole.ASSISTANT)
+                        .toolCalls(toolCallsJson)
+                        .tokensUsed(mockTokens)
+                        .build();
+                assistantMessage = chatMessageRepository.save(assistantMessage);
+
+                // 7. Save Usage log
+                UsageLog logRecord = UsageLog.builder()
+                        .user(actor)
+                        .project(project)
+                        .action("AI_CODE_GENERATION_STREAM")
+                        .tokensUsed(mockTokens)
+                        .createdAt(Instant.now())
+                        .metaData(String.format("{\"prompt_length\":%d,\"files_affected\":%d}", 
+                                request.content().length(), aiResponse.fileOperations().size()))
+                        .build();
+                usageLogRepository.save(logRecord);
+
+                // 8. Emit complete event & close emitter
+                ChatMessageResponse finalResponse = chatMapper.toChatMessageResponse(assistantMessage);
+                emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                        .name("complete")
+                        .data(new StreamEvent("complete", finalResponse)));
+                emitter.complete();
+
+            } catch (Exception e) {
+                log.error("Error during streaming generation for session {}", sessionId, e);
+                try {
+                    emitter.send(org.springframework.web.servlet.mvc.method.annotation.SseEmitter.event()
+                            .name("error")
+                            .data(new StreamEvent("error", e.getMessage())));
+                    emitter.completeWithError(e);
+                } catch (Exception ignored) {}
+            }
+        });
+
+        return emitter;
+    }
+
     // ── PRIVATE HELPERS ──────────────────────────────────────────────────────
 
     private void applyFileOperations(Project project, User actor, List<AIResponse.FileOperation> operations) {
