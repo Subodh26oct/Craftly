@@ -4,6 +4,7 @@ import com.Subodh26oct.projects.lovable_clone.dto.chat.ChatMessageRequest;
 import com.Subodh26oct.projects.lovable_clone.dto.chat.ChatMessageResponse;
 import com.Subodh26oct.projects.lovable_clone.dto.chat.ChatSessionRequest;
 import com.Subodh26oct.projects.lovable_clone.dto.chat.ChatSessionResponse;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -23,4 +24,10 @@ public interface ChatSessionService {
      * Triggers AI code generation, writes changes to storage/DB, and logs usage.
      */
     ChatMessageResponse sendMessage(Long projectId, Long sessionId, ChatMessageRequest request, Long userId);
+
+    /**
+     * Stream a prompt message into a chat session using Server-Sent Events (SSE).
+     * Emits token streams, applies code operations, logs usage, and completes the stream.
+     */
+    SseEmitter streamMessage(Long projectId, Long sessionId, ChatMessageRequest request, Long userId);
 }
