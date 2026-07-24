@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -37,6 +38,7 @@ public class GeminiAIServiceImpl implements AIService {
     final ProjectFileRepository projectFileRepository;
     final StorageService storageService;
     final ObjectMapper objectMapper;
+    final com.Subodh26oct.projects.lovable_clone.service.CodeVectorService codeVectorService;
 
     final OkHttpClient httpClient = new OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
@@ -94,19 +96,8 @@ public class GeminiAIServiceImpl implements AIService {
                 }
                 """;
 
-        // Build workspace context (current files)
-        StringBuilder workspaceContext = new StringBuilder();
-        workspaceContext.append("Current Project Files:\n");
-        List<ProjectFile> dbFiles = projectFileRepository.findByProjectId(projectId);
-        for (ProjectFile file : dbFiles) {
-            workspaceContext.append("--- File: ").append(file.getPath()).append(" ---\n");
-            try {
-                String content = storageService.get(file.getMinioObjectKey());
-                workspaceContext.append(content).append("\n");
-            } catch (Exception e) {
-                workspaceContext.append("[Error loading file content]\n");
-            }
-        }
+        // Build workspace context using Qdrant RAG Vector retrieval
+        String workspaceContext = buildRagWorkspaceContext(projectId, prompt);
 
         // Build prompt body
         StringBuilder fullPrompt = new StringBuilder();
@@ -358,18 +349,7 @@ public class GeminiAIServiceImpl implements AIService {
                   ]
                 }
                 """;
-
-        StringBuilder workspaceContext = new StringBuilder("Current Project Files:\n");
-        List<ProjectFile> dbFiles = projectFileRepository.findByProjectId(projectId);
-        for (ProjectFile file : dbFiles) {
-            workspaceContext.append("--- File: ").append(file.getPath()).append(" ---\n");
-            try {
-                String content = storageService.get(file.getMinioObjectKey());
-                workspaceContext.append(content).append("\n");
-            } catch (Exception e) {
-                workspaceContext.append("[Error loading file content]\n");
-            }
-        }
+        String workspaceContext = buildRagWorkspaceContext(projectId, prompt);
 
         StringBuilder fullPrompt = new StringBuilder();
         fullPrompt.append("SYSTEM INSTRUCTION:\n").append(systemInstruction).append("\n\n");
@@ -477,6 +457,39 @@ public class GeminiAIServiceImpl implements AIService {
         return objectMapper.readValue(fullText, AIResponse.class);
     }
 
+
+    private String buildRagWorkspaceContext(Long projectId, String prompt) {
+        StringBuilder sb = new StringBuilder();
+        try {
+            List<com.Subodh26oct.projects.lovable_clone.dto.rag.CodeChunk> chunks = codeVectorService.searchRelevantChunks(projectId, prompt, 5);
+
+            if (chunks != null && !chunks.isEmpty()) {
+                sb.append("RAG RELEVANT CODE CHUNKS (Retrieved from Qdrant Vector DB):\n");
+                for (var chunk : chunks) {
+                    sb.append("--- File: ").append(chunk.path())
+                      .append(" (lines ").append(chunk.startLine()).append("-").append(chunk.endLine())
+                      .append(", relevance score: ").append(String.format(Locale.US, "%.2f", chunk.score())).append(") ---\n")
+                      .append(chunk.snippet()).append("\n\n");
+                }
+                return sb.toString();
+            }
+        } catch (Exception e) {
+            log.warn("Vector DB retrieval failed, falling back to full project files: {}", e.getMessage());
+        }
+
+        sb.append("Current Project Files:\n");
+        List<ProjectFile> dbFiles = projectFileRepository.findByProjectId(projectId);
+        for (ProjectFile file : dbFiles) {
+            sb.append("--- File: ").append(file.getPath()).append(" ---\n");
+            try {
+                String content = storageService.get(file.getMinioObjectKey());
+                sb.append(content).append("\n");
+            } catch (Exception ex) {
+                sb.append("[Error loading file content]\n");
+            }
+        }
+        return sb.toString();
+    }
 
     private String extractFilenameFromPrompt(String prompt, String defaultName) {
         if (prompt == null) return defaultName;

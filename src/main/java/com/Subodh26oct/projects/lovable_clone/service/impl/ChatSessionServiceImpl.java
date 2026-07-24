@@ -39,6 +39,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     AIService aiService;
     ChatMapper chatMapper;
     ObjectMapper objectMapper;
+    com.Subodh26oct.projects.lovable_clone.service.CodeVectorService codeVectorService;
 
     @Override
     public ChatSessionResponse createSession(Long projectId, ChatSessionRequest request, Long userId) {
@@ -251,6 +252,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                     }
                     projectFileRepository.delete(file);
                 });
+                codeVectorService.removeFileIndex(project.getId(), path);
             } else {
                 // CREATE_OR_UPDATE
                 storageService.put(objectKey, op.content(), "text/plain");
@@ -269,6 +271,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                                 .build());
 
                 projectFileRepository.save(file);
+                codeVectorService.indexFile(project.getId(), path, op.content());
             }
         }
     }

@@ -39,6 +39,7 @@ public class FileServiceImpl implements FileService {
     ProjectMemberRepository projectMemberRepository;
     UserRepository userRepository;
     StorageService storageService;
+    com.Subodh26oct.projects.lovable_clone.service.CodeVectorService codeVectorService;
 
     // ── READ ──────────────────────────────────────────────────────────────────
 
@@ -94,6 +95,9 @@ public class FileServiceImpl implements FileService {
         storageService.put(objectKey, request.content(), request.resolvedContentType());
         projectFileRepository.save(file);
 
+        // Index vector embedding in Qdrant Vector DB for RAG retrieval
+        codeVectorService.indexFile(projectId, normalPath, request.content());
+
         log.info("Saved file {} in project {}", normalPath, projectId);
         return new FileContentResponse(normalPath, request.content());
     }
@@ -109,6 +113,10 @@ public class FileServiceImpl implements FileService {
 
         storageService.delete(file.getMinioObjectKey());
         projectFileRepository.delete(file);
+
+        // Remove vector embedding from Qdrant Vector DB
+        codeVectorService.removeFileIndex(projectId, normalPath);
+
         log.info("Deleted file {} from project {}", normalPath, projectId);
     }
 
