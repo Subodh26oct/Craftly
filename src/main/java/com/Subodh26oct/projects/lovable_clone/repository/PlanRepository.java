@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface PlanRepository extends JpaRepository<Plan, Long> {
     List<Plan> findByActiveTrue();
+    java.util.Optional<Plan> findByName(String name);
 }
