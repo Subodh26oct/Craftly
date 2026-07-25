@@ -34,8 +34,11 @@ build/
 .vscode/
 
 .env
+.env.production
 
 # Logs
 *.log
+hs_err_pid*.log
 
-
+# Docker override (local customizations)
+docker-compose.override.yml

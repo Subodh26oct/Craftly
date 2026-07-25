@@ -1,0 +1,169 @@
+# ═══════════════════════════════════════════════════════════════
+#  Craftly Platform - One-Click Docker Compose Stack
+#  Services: PostgreSQL | MinIO | Qdrant | Spring Boot API
+# ═══════════════════════════════════════════════════════════════
+
+# ──── Shared network ────────────────────────────────────────────
+networks:
+  craftly-net:
+    driver: bridge
+
+# ──── Named volumes for persistence ─────────────────────────────
+volumes:
+  postgres_data:
+  minio_data:
+  qdrant_data:
+
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # 1. PostgreSQL 18 Database
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: craftly-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-craftlydb}
+      POSTGRES_USER:     ${DB_USERNAME:-craftly}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-craftly_secret}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - craftly-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-craftly} -d ${DB_NAME:-craftlydb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────────────────────
+  # 2. MinIO Object Storage (S3-Compatible)
+  # ─────────────────────────────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: craftly-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER:     ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
+    command: server /data --console-address ":9091"
+    ports:
+      - "9001:9000"    # S3 API
+      - "9091:9091"    # MinIO Web Console
+    volumes:
+      - minio_data:/data
+    networks:
+      - craftly-net
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO bucket init (runs once, creates the 'craftly-projects' bucket)
+  minio-init:
+    image: minio/mc:latest
+    container_name: craftly-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET:     ${MINIO_BUCKET:-craftly-projects}
+    entrypoint: >
+      sh -c "
+        mc alias set local http://minio:9000 $$MINIO_ACCESS_KEY $$MINIO_SECRET_KEY &&
+        mc mb --ignore-existing local/$$MINIO_BUCKET &&
+        mc anonymous set download local/$$MINIO_BUCKET &&
+        echo 'MinIO bucket ready.'
+      "
+    networks:
+      - craftly-net
+
+  # ─────────────────────────────────────────────────────────────
+  # 3. Qdrant Vector Database
+  # ─────────────────────────────────────────────────────────────
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: craftly-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"    # REST API
+      - "6334:6334"    # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - craftly-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:6333/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─────────────────────────────────────────────────────────────
+  # 4. Craftly Spring Boot API
+  # ─────────────────────────────────────────────────────────────
+  craftly-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: craftly-api:latest
+    container_name: craftly-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    ports:
+      - "8081:8080"   # mapped to 8081 to avoid conflict with local IntelliJ dev server
+    environment:
+      # ── Database ────────────────────────────────────────────
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     ${DB_NAME:-craftlydb}
+      DB_USERNAME: ${DB_USERNAME:-craftly}
+      DB_PASSWORD: ${DB_PASSWORD:-craftly_secret}
+
+      # ── JWT ─────────────────────────────────────────────────
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+
+      # ── MinIO ───────────────────────────────────────────────
+      MINIO_ENDPOINT:   http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET:     ${MINIO_BUCKET:-craftly-projects}
+
+      # ── Gemini AI ───────────────────────────────────────────
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+
+      # ── Qdrant Vector DB ────────────────────────────────────
+      QDRANT_URL:        http://qdrant:6333
+      QDRANT_API_KEY:    ${QDRANT_API_KEY:-}
+      QDRANT_COLLECTION: ${QDRANT_COLLECTION:-craftly_code_chunks}
+
+      # ── Stripe Billing ──────────────────────────────────────
+      STRIPE_API_KEY:        ${STRIPE_API_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_SUCCESS_URL:    ${STRIPE_SUCCESS_URL:-http://localhost:5173/dashboard?payment=success}
+      STRIPE_CANCEL_URL:     ${STRIPE_CANCEL_URL:-http://localhost:5173/pricing?payment=cancel}
+
+      # ── Spring Hibernate ────────────────────────────────────
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SHOW_SQL: "false"
+
+    networks:
+      - craftly-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
