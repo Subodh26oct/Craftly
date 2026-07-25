@@ -105,6 +105,13 @@
 			<version>8.5.12</version>
 		</dependency>
 
+		<!-- Stripe Java SDK for payments & billing -->
+		<dependency>
+			<groupId>com.stripe</groupId>
+			<artifactId>stripe-java</artifactId>
+			<version>26.0.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>
