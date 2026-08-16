@@ -41,6 +41,7 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     ObjectMapper objectMapper;
     com.Subodh26oct.projects.lovable_clone.service.CodeVectorService codeVectorService;
     com.Subodh26oct.projects.lovable_clone.service.UsageTrackingService usageTrackingService;
+    com.Subodh26oct.projects.lovable_clone.service.KafkaProducerService kafkaProducerService;
 
     @Override
     public ChatSessionResponse createSession(Long projectId, ChatSessionRequest request, Long userId) {
@@ -133,6 +134,16 @@ public class ChatSessionServiceImpl implements ChatSessionService {
                         request.content().length(), aiResponse.fileOperations().size()))
                 .build();
         usageLogRepository.save(logRecord);
+
+        // 8. Publish Kafka Events asynchronously
+        if (kafkaProducerService != null) {
+            kafkaProducerService.sendAIGenerationEvent(new com.Subodh26oct.projects.lovable_clone.dto.event.AIGenerationEvent(
+                    projectId, userId, request.content(), mockTokens, Instant.now()
+            ));
+            kafkaProducerService.sendUsageAuditEvent(new com.Subodh26oct.projects.lovable_clone.dto.event.UsageAuditEvent(
+                    userId, "AI_CODE_GENERATION", mockTokens, "Session: " + sessionId, Instant.now()
+            ));
+        }
 
         log.info("Processed AI generation prompt for session {} (affecting {} files)", 
                 sessionId, aiResponse.fileOperations().size());

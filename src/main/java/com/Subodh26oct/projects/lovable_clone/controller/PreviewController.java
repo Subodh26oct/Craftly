@@ -26,6 +26,7 @@ public class PreviewController {
     AuthUtil authUtil;
 
     @PostMapping
+    @com.Subodh26oct.projects.lovable_clone.annotation.RequireQuota(com.Subodh26oct.projects.lovable_clone.enums.QuotaType.PREVIEW_CONTAINERS)
     public ResponseEntity<PreviewResponse> startPreview(@PathVariable Long projectId) {
         Long userId = authUtil.getCurrentUserId();
         PreviewResponse response = previewService.startPreview(projectId, userId);

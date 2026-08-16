@@ -112,6 +112,12 @@
 			<version>26.0.0</version>
 		</dependency>
 
+		<!-- Spring Kafka for Event-Driven Architecture -->
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -39,5 +39,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
                                                 @Param("userId") Long userId);
 
     boolean existsByIdAndOwnerId(Long projectId, Long userId);
+
+    long countByOwnerId(Long ownerId);
 }
 

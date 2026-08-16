@@ -26,4 +26,6 @@ public interface UsageLogRepository extends JpaRepository<UsageLog, Long> {
     Integer sumTokensUsedByProjectId(@Param("projectId") Long projectId);
 
     Long countByProjectId(Long projectId);
+
+    Integer countByUserIdAndAction(Long userId, String action);
 }

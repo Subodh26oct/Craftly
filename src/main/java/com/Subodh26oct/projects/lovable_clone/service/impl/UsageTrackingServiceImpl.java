@@ -148,6 +148,47 @@ public class UsageTrackingServiceImpl implements UsageTrackingService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public void checkProjectCreationLimit(Long userId) {
+        Plan plan = subscriptionRepository.findFirstByUserIdOrderByIdDesc(userId)
+                .map(com.Subodh26oct.projects.lovable_clone.entity.Subscription::getPlan)
+                .orElse(null);
+        if (plan != null && Boolean.TRUE.equals(plan.getUnlimitedAi())) {
+            return;
+        }
+
+        int maxProjects = (plan != null && plan.getMaxProjects() != null) ? plan.getMaxProjects() : 3;
+        long currentProjectCount = projectRepository.countByOwnerId(userId);
+
+        if (currentProjectCount >= maxProjects) {
+            String planName = (plan != null && plan.getName() != null) ? plan.getName() : "FREE";
+            throw new RateLimitExceededException("Project limit (" + maxProjects + ") reached for " + planName + " tier. Upgrade your plan to create more projects.");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void checkPreviewLimit(Long userId) {
+        Plan plan = subscriptionRepository.findFirstByUserIdOrderByIdDesc(userId)
+                .map(com.Subodh26oct.projects.lovable_clone.entity.Subscription::getPlan)
+                .orElse(null);
+        if (plan != null && Boolean.TRUE.equals(plan.getUnlimitedAi())) {
+            return;
+        }
+
+        int maxPreviews = (plan != null && plan.getMaxPreviews() != null) ? plan.getMaxPreviews() : 1;
+        Integer activePreviews = usageLogRepository.countByUserIdAndAction(userId, "PREVIEW_STARTED"); // or previewRepository.countByUserIdAndStatus
+        if (activePreviews == null) {
+            activePreviews = 0;
+        }
+
+        if (activePreviews >= maxPreviews) {
+            String planName = (plan != null && plan.getName() != null) ? plan.getName() : "FREE";
+            throw new RateLimitExceededException("Running container preview limit (" + maxPreviews + ") reached for " + planName + " tier. Upgrade your subscription to launch additional previews.");
+        }
+    }
+
+    @Override
     public void recordUsage(Long userId, Long projectId, String action, int tokensUsed, int durationMs) {
         User user = userRepository.getReferenceById(userId);
         Project project = (projectId != null) ? projectRepository.getReferenceById(projectId) : null;

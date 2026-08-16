@@ -54,6 +54,7 @@ public class ChatSessionController {
 
     /** POST /api/projects/{projectId}/chat/sessions/{sessionId}/messages → submit a new prompt to AI */
     @PostMapping("/{sessionId}/messages")
+    @com.Subodh26oct.projects.lovable_clone.annotation.RequireQuota(com.Subodh26oct.projects.lovable_clone.enums.QuotaType.AI_TOKENS)
     public ResponseEntity<ChatMessageResponse> sendMessage(
             @PathVariable Long projectId,
             @PathVariable Long sessionId,
@@ -67,6 +68,7 @@ public class ChatSessionController {
      * POST /api/projects/{projectId}/chat/sessions/{sessionId}/stream → stream AI code generation via Server-Sent Events (SSE)
      */
     @PostMapping(value = "/{sessionId}/stream", produces = org.springframework.http.MediaType.TEXT_EVENT_STREAM_VALUE)
+    @com.Subodh26oct.projects.lovable_clone.annotation.RequireQuota(com.Subodh26oct.projects.lovable_clone.enums.QuotaType.AI_TOKENS)
     public org.springframework.web.servlet.mvc.method.annotation.SseEmitter streamMessage(
             @PathVariable Long projectId,
             @PathVariable Long sessionId,

@@ -30,6 +30,7 @@ public class ProjectController {
     }
 
     @PostMapping
+    @com.Subodh26oct.projects.lovable_clone.annotation.RequireQuota(com.Subodh26oct.projects.lovable_clone.enums.QuotaType.MAX_PROJECTS)
     public ResponseEntity<ProjectResponse> createProject(@RequestBody @Valid ProjectRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(projectService.createProject(request));
     }
