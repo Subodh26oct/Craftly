@@ -124,12 +124,20 @@ export const DashboardPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [usage, setUsage] = useState<UserUsageSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [projectName, setProjectName] = useState('');
   const [projectDesc, setProjectDesc] = useState('');
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handler = () => setUserMenuOpen(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, []);
 
   useEffect(() => {
     const load = async () => {
@@ -140,6 +148,19 @@ export const DashboardPage: React.FC = () => {
         ]);
         setProjects(projRes.data);
         if (usageRes) setUsage(usageRes.data);
+        setApiError(null);
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403) {
+          logout();
+          navigate('/login');
+        } else {
+          setApiError(
+            status
+              ? `API error ${status}. The backend may be waking up — try refreshing in 30 seconds.`
+              : 'Cannot reach the backend. Render free tier may be starting up (30–60 s). Please refresh.'
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -248,6 +269,26 @@ export const DashboardPage: React.FC = () => {
 
       {/* ── MAIN CONTENT ── */}
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: 'clamp(1.5rem,4vw,2.5rem) clamp(1rem,3vw,2rem)' }}>
+
+        {/* ── API ERROR BANNER ── */}
+        {apiError && (
+          <div style={{
+            background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+            borderRadius: 'var(--r-lg)', padding: '14px 18px', marginBottom: 24,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: '1rem' }}>⚠️</span>
+              <span style={{ fontSize: '0.875rem', color: '#fbbf24', lineHeight: 1.5 }}>{apiError}</span>
+            </div>
+            <button
+              onClick={() => { setApiError(null); setLoading(true); window.location.reload(); }}
+              style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', padding: '6px 14px', borderRadius: 'var(--r-md)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'var(--font)', flexShrink: 0 }}
+            >
+              Refresh
+            </button>
+          </div>
+        )}
 
         {/* ── GREETING + STATS ── */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 24, marginBottom: 36 }}>
