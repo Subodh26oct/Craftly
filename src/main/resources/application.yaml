@@ -34,6 +34,13 @@ spring:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+
 
 jwt:
   secret-key: ${JWT_SECRET_KEY:}
@@ -57,3 +64,16 @@ stripe:
   webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
   success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/dashboard?payment=success}
   cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/pricing?payment=cancel}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_ENDPOINT:http://localhost:9411/api/v2/spans}
+
