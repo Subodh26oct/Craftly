@@ -1,0 +1,45 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  kafka:
+    bootstrap-servers: localhost:9092
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  secret-key: Ky7mXp3qR9sWvZn2BdFhJlNrTuYxAeCgIkMoQtVwDzGbHjPfSaUcXeRmKn4Lp8Ws
+
+minio:
+  endpoint: http://localhost:9001
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: craftly-test-bucket
+
+gemini:
+  api-key: test_api_key
+
+qdrant:
+  url: http://localhost:6333
+  collection: craftly_test_code_chunks
+
+stripe:
+  api-key: sk_test_mock
+  webhook-secret: whsec_test_mock
+  success-url: http://localhost:5173/dashboard?payment=success
+  cancel-url: http://localhost:5173/pricing?payment=cancel
+
+management:
+  tracing:
+    sampling:
+      probability: 0.0
