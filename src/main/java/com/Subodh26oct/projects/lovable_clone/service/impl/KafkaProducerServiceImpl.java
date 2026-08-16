@@ -6,24 +6,22 @@ import com.Subodh26oct.projects.lovable_clone.dto.event.PreviewLogEvent;
 import com.Subodh26oct.projects.lovable_clone.dto.event.UsageAuditEvent;
 import com.Subodh26oct.projects.lovable_clone.service.KafkaProducerService;
 
-import lombok.AccessLevel;
-import lombok.RequiredArgsConstructor;
-import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
-@FieldDefaults(makeFinal = true, level = AccessLevel.PRIVATE)
 public class KafkaProducerServiceImpl implements KafkaProducerService {
 
+    @Autowired(required = false)
     KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public void sendAIGenerationEvent(AIGenerationEvent event) {
+        if (kafkaTemplate == null) return;
         try {
             String key = event.projectId() != null ? event.projectId().toString() : "global";
             kafkaTemplate.send(KafkaConfig.TOPIC_AI_EVENTS, key, event);
@@ -35,6 +33,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
 
     @Override
     public void sendUsageAuditEvent(UsageAuditEvent event) {
+        if (kafkaTemplate == null) return;
         try {
             String key = event.userId() != null ? event.userId().toString() : "anonymous";
             kafkaTemplate.send(KafkaConfig.TOPIC_USAGE_AUDIT, key, event);
@@ -46,6 +45,7 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
 
     @Override
     public void sendPreviewLogEvent(PreviewLogEvent event) {
+        if (kafkaTemplate == null) return;
         try {
             String key = event.previewId() != null ? event.previewId().toString() : "global";
             kafkaTemplate.send(KafkaConfig.TOPIC_PREVIEW_LOGS, key, event);
